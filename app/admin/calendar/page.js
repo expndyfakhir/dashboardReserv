@@ -118,83 +118,11 @@ export default function CalendarPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          <div className="lg:col-span-1">
-            <motion.div 
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
-              className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-lg border border-[#316160]/10 p-6 sticky top-8"
-            >
-              <h2 className="text-xl font-semibold text-[#316160] mb-6">Calendar Options</h2>
-              
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-[#316160]/80 mb-2">View</label>
-                  <div className="flex flex-col space-y-2">
-                    {['month', 'week', 'day'].map((viewOption) => (
-                      <button
-                        key={viewOption}
-                        onClick={() => setView(viewOption)}
-                        className={`px-4 py-3 rounded-xl text-left transition-all ${
-                          view === viewOption 
-                            ? 'bg-[#316160] text-white font-medium shadow-md' 
-                            : 'bg-[#316160]/10 text-[#316160] hover:bg-[#316160]/20'
-                        }`}
-                      >
-                        {viewOption.charAt(0).toUpperCase() + viewOption.slice(1)} View
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-[#316160]/80 mb-2">Filter Reservations</label>
-                  <div className="relative">
-                    <select
-                      value={filter}
-                      onChange={(e) => setFilter(e.target.value)}
-                      className="block w-full px-4 py-3 rounded-xl border-2 border-[#316160]/20 bg-white shadow-sm focus:border-[#316160] focus:ring focus:ring-[#316160]/20 sm:text-sm transition-all duration-200 hover:border-[#316160]/40 appearance-none cursor-pointer"
-                    >
-                      <option value="all">All Reservations</option>
-                      <option value="confirmed">Confirmed Only</option>
-                      <option value="pending">Pending Only</option>
-                      <option value="cancelled">Cancelled Only</option>
-                    </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                      <FunnelIcon className="h-4 w-4 text-[#316160]/60" />
-                    </div>
-                  </div>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-[#316160]/80 mb-2">Statistics</label>
-                  <div className="space-y-3">
-                    <div className="bg-[#316160]/5 rounded-xl p-4">
-                      <p className="text-sm text-[#316160]/70">Total Reservations</p>
-                      <p className="text-2xl font-bold text-[#316160]">{reservations.length}</p>
-                    </div>
-                    <div className="bg-[#316160]/5 rounded-xl p-4">
-                      <p className="text-sm text-[#316160]/70">Today's Reservations</p>
-                      <p className="text-2xl font-bold text-[#316160]">
-                        {reservations.filter(r => {
-                          const today = new Date();
-                          const resDate = new Date(r.date);
-                          return resDate.toDateString() === today.toDateString();
-                        }).length}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-
+        <div className="grid grid-cols-1 gap-8">
           <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-            className="lg:col-span-3"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.2 }}
           >
             <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-[#316160]/10 overflow-hidden">
               <div className="px-6 py-5 border-b border-[#316160]/10 flex flex-col sm:flex-row justify-between items-center gap-4">
@@ -225,21 +153,13 @@ export default function CalendarPage() {
               </div>
               
               <div className="p-6">
-                {isLoading ? (
-                  <div className="flex justify-center items-center h-96">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#316160]"></div>
-                  </div>
-                ) : (
-                  <ReservationCalendar 
-                    reservations={
-                      filter === 'all' 
-                        ? reservations 
-                        : reservations.filter(r => r.status === filter)
-                    }
-                    view={view}
-                    currentDate={currentDate}
-                  />
-                )}
+          {isLoading ? (
+            <div className="flex justify-center items-center h-96">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#316160]"></div>
+            </div>
+          ) : (
+            <ReservationCalendar />
+          )}
               </div>
             </div>
             
