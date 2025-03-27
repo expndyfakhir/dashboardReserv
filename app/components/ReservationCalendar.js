@@ -9,16 +9,18 @@ import { format } from 'date-fns';
 import { motion, AnimatePresence } from 'framer-motion';
 import { XMarkIcon, UserGroupIcon, TableCellsIcon, EnvelopeIcon, PhoneIcon, ChatBubbleLeftRightIcon } from '@heroicons/react/24/outline';
 
-export default function ReservationCalendar() {
-  const [reservations, setReservations] = useState([]);
+export default function ReservationCalendar({ reservations: propReservations }) {
+  const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const modalRef = useRef(null);
 
   useEffect(() => {
-    fetchReservations();
-  }, []);
+    if (propReservations) {
+      transformReservations(propReservations);
+    }
+  }, [propReservations]);
 
   useEffect(() => {
     // Close modal when clicking outside
@@ -31,16 +33,10 @@ export default function ReservationCalendar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [modalRef]);
 
-  const fetchReservations = async () => {
+  const transformReservations = (reservations) => {
     try {
-      const response = await fetch('/api/reservations');
-      if (!response.ok) {
-        throw new Error('Failed to fetch reservations');
-      }
-      const data = await response.json();
-      
       // Transform reservations into calendar events
-      const events = data.map(reservation => ({
+      const transformedEvents = reservations.map(reservation => ({
         id: reservation.id,
         title: `${reservation.customerName} (${reservation.partySize} guests)`,
         start: `${format(new Date(reservation.date), 'yyyy-MM-dd')}T${reservation.time}`,
@@ -60,7 +56,7 @@ export default function ReservationCalendar() {
         classNames: ['modern-event']
       }));
 
-      setReservations(events);
+      setEvents(transformedEvents);
       setLoading(false);
     } catch (err) {
       setError(err.message);
@@ -271,7 +267,7 @@ export default function ReservationCalendar() {
         }}
         slotMinTime="09:00:00"
         slotMaxTime="23:00:00"
-        events={reservations}
+        events={events}
         eventClick={handleEventClick}
         height="100%"
         allDaySlot={false}

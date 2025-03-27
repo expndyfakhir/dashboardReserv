@@ -1,6 +1,23 @@
 'use client';
 
-export default function ReservationListTable({ reservations = [] }) {
+export default function ReservationListTable({ reservations = [], onStatusChange }) {
+  const statusOptions = ['pending', 'confirmed', 'cancelled', 'completed'];
+
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-amber-50 text-amber-700';
+      case 'confirmed':
+        return 'bg-emerald-50 text-emerald-700';
+      case 'cancelled':
+        return 'bg-rose-50 text-rose-700';
+      case 'completed':
+        return 'bg-slate-50 text-slate-700';
+      default:
+        return 'bg-gray-50 text-gray-700';
+    }
+  };
+
   return (
     <div className="mb-12 bg-white rounded-3xl shadow-2xl overflow-hidden border border-gray-100">
       <div className="px-8 py-6">
@@ -39,9 +56,17 @@ export default function ReservationListTable({ reservations = [] }) {
                   </span>
                 </td>
                 <td className="px-6 py-4 text-sm">
-                  <span className={`status ${reservation.status}`}>
-                    {reservation.status}
-                  </span>
+                  <select
+                    value={reservation.status}
+                    onChange={(e) => onStatusChange(reservation.id, e.target.value)}
+                    className={`rounded-full px-3 py-1 text-xs font-medium ${getStatusColor(reservation.status)} border border-current cursor-pointer transition-colors hover:bg-opacity-80`}
+                  >
+                    {statusOptions.map((status) => (
+                      <option key={status} value={status}>
+                        {status.charAt(0).toUpperCase() + status.slice(1)}
+                      </option>
+                    ))}
+                  </select>
                 </td>
               </tr>
             ))}

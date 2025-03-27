@@ -53,6 +53,26 @@ export default function ReservationsPage() {
     }
   };
 
+  const handleStatusChange = async (reservationId, newStatus) => {
+    try {
+      const response = await fetch(`/api/reservations/${reservationId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update reservation status');
+      }
+
+      toast.success('Reservation status updated successfully');
+      fetchReservations(); // Refresh the reservations list
+    } catch (error) {
+      toast.error(error.message);
+    }
+  };
+
   const fetchAvailableTables = async () => {
     try {
       setLoading(true);
@@ -167,7 +187,10 @@ export default function ReservationsPage() {
         >
           {view === 'list' ? (
             <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl border border-[#316160]/10 overflow-hidden">
-              <ReservationListTable reservations={reservations} />
+              <ReservationListTable 
+                reservations={reservations} 
+                onStatusChange={handleStatusChange}
+              />
             </div>
           ) : (
             <div className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-xl p-8 border border-[#316160]/10">

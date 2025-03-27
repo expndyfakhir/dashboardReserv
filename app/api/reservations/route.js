@@ -87,10 +87,7 @@ async function findAvailableTable(partySize, date, time) {
 
 export async function POST(request) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session || (session.user.role !== 'ADMIN' && session.user.role !== 'SUPER_ADMIN')) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    // Public endpoint - no authentication required
 
     const data = await request.json();
     const { customerName, customerEmail, customerPhone, partySize, date, time, specialRequests, reservationType = 'normal' } = data;
@@ -139,8 +136,7 @@ export async function POST(request) {
         time,
         specialRequests,
         tableId: availableTable.id,
-        handledBy: session.user.id,
-        status: 'confirmed', // Admin-created reservations are automatically confirmed
+        status: 'pending', // Public reservations start as pending
         reservationType
       }
     });

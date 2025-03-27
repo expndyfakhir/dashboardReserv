@@ -28,7 +28,9 @@ export default function CalendarPage() {
       const response = await fetch('/api/reservations');
       if (!response.ok) throw new Error('Failed to fetch reservations');
       const data = await response.json();
-      setReservations(data);
+      // Filter out completed reservations
+      const filteredData = data.filter(reservation => reservation.status !== 'completed');
+      setReservations(filteredData);
     } catch (error) {
       console.error('Error fetching reservations:', error);
     } finally {
@@ -158,7 +160,7 @@ export default function CalendarPage() {
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#316160]"></div>
             </div>
           ) : (
-            <ReservationCalendar />
+            <ReservationCalendar reservations={reservations} />
           )}
               </div>
             </div>
@@ -168,7 +170,7 @@ export default function CalendarPage() {
               
               <div className="space-y-3">
                 {reservations
-                  .filter(r => new Date(r.date) >= new Date())
+                  .filter(r => new Date(r.date) >= new Date() && r.status !== 'completed')
                   .sort((a, b) => new Date(a.date) - new Date(b.date))
                   .slice(0, 3)
                   .map((reservation, index) => (
