@@ -86,9 +86,9 @@ export default function Dashboard() {
           })
         };
 
-        // Fetch reservations for next 2 hours
+        // Fetch reservations for today and next hour
         const now = new Date();
-        const twoHoursFromNow = new Date(now.getTime() + (2 * 60 * 60 * 1000));
+        const oneHourFromNow = new Date(now.getTime() + (60 * 60 * 1000));
         
         const reservationsRes = await fetch('/api/reservations/upcoming');
         if (!reservationsRes.ok) {
@@ -96,10 +96,11 @@ export default function Dashboard() {
         }
         let upcomingReservations = await reservationsRes.json();
         
-        // Filter reservations within next 2 hours
+        // Filter reservations for today and within next hour
         upcomingReservations = upcomingReservations.filter(reservation => {
           const reservationDateTime = new Date(`${reservation.date}T${reservation.time}`);
-          return reservationDateTime >= now && reservationDateTime <= twoHoursFromNow;
+          const isToday = reservationDateTime.toDateString() === now.toDateString();
+          return isToday && reservationDateTime >= now && reservationDateTime <= oneHourFromNow;
         });
 
         // Fetch notifications
@@ -241,7 +242,7 @@ export default function Dashboard() {
           className="lg:col-span-2 bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-slate-200/50 overflow-hidden transform transition-all duration-300 hover:shadow-xl"
         >
           <div className="p-6 border-b border-slate-200/50">
-            <h2 className="text-xl font-semibold text-slate-800">Upcoming Reservations (Next 2 Hours)</h2>
+            <h2 className="text-xl font-semibold text-slate-800">Today's Upcoming Reservations (Next Hour)</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full border-separate border-spacing-0">
