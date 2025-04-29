@@ -1,0 +1,58 @@
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model Table {
+  id           String        @id @default(auto()) @map("_id") @db.ObjectId
+  tableNumber  Int           @unique
+  capacity     Int
+  isAvailable  Boolean       @default(true)
+  isDivisible  Boolean       @default(false)
+  splitStatus  String? // null: not split, "left": left half booked, "right": right half booked, "both": fully booked when split
+  tableType    String        @default("normal") // normal, business, dinner
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  reservations Reservation[] // Add relation to Reservation model
+}
+
+model Reservation {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  customerName    String
+  customerEmail   String
+  customerPhone   String
+  partySize       Int
+  date            DateTime
+  time            String // Store as HH:MM format
+  reservationType String   @default("normal") // normal, business, dinner
+  specialRequests String?
+  status          String   @default("pending") // pending, confirmed, cancelled, completed
+  tableId         String   @db.ObjectId
+  table           Table    @relation(fields: [tableId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  handledBy       String?
+}
+
+model Users {
+  id        String    @id @default(auto()) @map("_id") @db.ObjectId
+  username  String    @unique
+  password  String // Hashed password
+  email     String    @unique
+  firstName String
+  lastName  String
+  role      String    @default("ADMIN") // ADMIN or SUPER_ADMIN
+  isActive  Boolean   @default(true)
+  lastLogin DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
