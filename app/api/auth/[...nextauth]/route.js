@@ -5,7 +5,7 @@ import { prisma } from '../../../lib/prisma';
 import bcrypt from 'bcryptjs';
 
 export const authOptions = {
-  adapter: PrismaAdapter(prisma),
+  adapter: PrismaAdapter({...prisma, model: { user: 'users' }}),
   providers: [
     CredentialsProvider({
       name: 'Credentials',
@@ -18,19 +18,21 @@ export const authOptions = {
           where: { username: credentials?.username }
         });
 
-        if (!user || !user.isActive) {
-          throw new Error('Account is inactive or banned');
+        if (!user) throw new Error('InvalidCredentials');
+        if (!user.isActive) {
+          throw new Error('AccountInactive');
         }
 
-        if (user && bcrypt.compareSync(credentials?.password, user.password)) {
-          return { 
-            id: user.id,
-            name: user.username,
-            email: user.email,
-            role: user.role,
-            isActive: user.isActive
-          };
-        }
+        const passwordMatch = await bcrypt.compare(credentials.password, user.password);
+        if (!passwordMatch) throw new Error('InvalidCredentials');
+
+        return {
+          id: user.id,
+          name: user.username,
+          email: user.email,
+          role: user.role,
+          isActive: user.isActive
+        };
         return null;
       }
     })
