@@ -4,7 +4,6 @@ import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import { BellIcon, CogIcon, UserIcon } from '@heroicons/react/24/outline';
 import { motion } from 'framer-motion';
-
 export default function Dashboard() {
   const { data: session } = useSession();
   const [stats, setStats] = useState(null);
@@ -87,12 +86,21 @@ export default function Dashboard() {
           })
         };
 
-        // Fetch recent reservations
-        const recentReservations = [
-          { id: '#RES-001', customer: 'Emma Thompson', date: 'Today, 19:30', guests: 4, status: 'Confirmed', phone: '(555) 123-4567' },
-          { id: '#RES-002', customer: 'Michael Johnson', date: 'Today, 20:00', guests: 2, status: 'Pending', phone: '(555) 234-5678' },
-          { id: '#RES-003', customer: 'Sophia Davis', date: 'Today, 21:15', guests: 6, status: 'Confirmed', phone: '(555) 345-6789' }
-        ];
+        // Fetch reservations for next 2 hours
+        const now = new Date();
+        const twoHoursFromNow = new Date(now.getTime() + (2 * 60 * 60 * 1000));
+        
+        const reservationsRes = await fetch('/api/reservations/upcoming');
+        if (!reservationsRes.ok) {
+          throw new Error('Failed to fetch upcoming reservations');
+        }
+        let upcomingReservations = await reservationsRes.json();
+        
+        // Filter reservations within next 2 hours
+        upcomingReservations = upcomingReservations.filter(reservation => {
+          const reservationDateTime = new Date(`${reservation.date}T${reservation.time}`);
+          return reservationDateTime >= now && reservationDateTime <= twoHoursFromNow;
+        });
 
         // Fetch notifications
         const recentNotifications = [
@@ -102,7 +110,7 @@ export default function Dashboard() {
         ];
 
         setStats(statsData);
-        setReservations(recentReservations);
+        setReservations(upcomingReservations);
         setNotifications(recentNotifications);
       } catch (err) {
         setError('Failed to fetch dashboard data');
@@ -233,7 +241,7 @@ export default function Dashboard() {
           className="lg:col-span-2 bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-slate-200/50 overflow-hidden transform transition-all duration-300 hover:shadow-xl"
         >
           <div className="p-6 border-b border-slate-200/50">
-            <h2 className="text-xl font-semibold text-slate-800">Recent Reservations</h2>
+            <h2 className="text-xl font-semibold text-slate-800">Upcoming Reservations (Next 2 Hours)</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full border-separate border-spacing-0">
