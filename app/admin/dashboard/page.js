@@ -3,14 +3,22 @@
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import { BellIcon, CogIcon, UserIcon } from '@heroicons/react/24/outline';
+import NotificationSound from '../../components/NotificationSound';
 import { motion } from 'framer-motion';
 export default function Dashboard() {
   const { data: session } = useSession();
   const [stats, setStats] = useState(null);
   const [reservations, setReservations] = useState([]);
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const savedNotifications = localStorage.getItem('dashboardNotifications');
+      return savedNotifications ? JSON.parse(savedNotifications) : [];
+    }
+    return [];
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [lastExternalReservationId, setLastExternalReservationId] = useState(null);
 
   // Format current time and date
   const formatDateTime = () => {
@@ -30,6 +38,69 @@ export default function Dashboard() {
   };
 
   const [currentDateTime, setCurrentDateTime] = useState(formatDateTime());
+
+  // Check for new external reservations every 30 seconds
+  useEffect(() => {
+    const checkReservations = async () => {
+      try {
+        const response = await fetch('/api/reservations');
+        if (!response.ok) throw new Error('Failed to fetch reservations');
+        const data = await response.json();
+        
+        // Get all new reservations (both external and normal)
+        const latestReservations = data.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        
+        if (latestReservations.length > 0) {
+          const latestReservation = latestReservations[0];
+          
+          // If we have a new reservation
+          if (lastExternalReservationId !== latestReservation.id) {
+            setLastExternalReservationId(latestReservation.id);
+            
+            // Play notification sound
+            if (window.playReservationNotification) {
+              window.playReservationNotification();
+            }
+            
+            // Format time
+            const timeString = new Date().toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: '2-digit',
+              hour12: true
+            });
+            
+            // Add notification with more details
+            const newNotification = {
+              id: Date.now(),
+              message: `New ${latestReservation.reservationType} reservation by ${latestReservation.customerName} for ${latestReservation.partySize} guests at ${timeString}`,
+              time: 'Just now',
+              type: latestReservation.status === 'confirmed' ? 'success' : 'warning'
+            };
+            
+            // Update notifications list with max 10 items
+            setNotifications(prev => {
+              const updatedNotifications = [newNotification, ...prev].slice(0, 10);
+              // Save to localStorage
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('dashboardNotifications', JSON.stringify(updatedNotifications));
+              }
+              return updatedNotifications;
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error checking reservations:', error);
+      }
+    };
+
+    // Initial check
+    checkReservations();
+
+    // Set up interval for more frequent checks (every 10 seconds)
+    const timer = setInterval(checkReservations, 10000);
+
+    return () => clearInterval(timer);
+  }, [lastExternalReservationId]);
 
   useEffect(() => {
     // Update time every minute
@@ -103,16 +174,8 @@ export default function Dashboard() {
           return isToday && reservationDateTime >= now && reservationDateTime <= oneHourFromNow;
         });
 
-        // Fetch notifications
-        const recentNotifications = [
-          { id: 1, message: 'New reservation by Emma Thompson for 4 guests', time: '5 min ago', type: 'success' },
-          { id: 2, message: 'Reservation #RES-004 cancelled', time: '15 min ago', type: 'warning' },
-          { id: 3, message: 'Low inventory alert: Truffle Pasta', time: '1 hr ago', type: 'error' }
-        ];
-
         setStats(statsData);
         setReservations(upcomingReservations);
-        setNotifications(recentNotifications);
       } catch (err) {
         setError('Failed to fetch dashboard data');
         console.error('Dashboard data fetch error:', err);
@@ -148,6 +211,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+      <NotificationSound />
       {/* Header Section */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
