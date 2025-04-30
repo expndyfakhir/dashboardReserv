@@ -5,28 +5,41 @@ const prisma = new PrismaClient();
 
 export async function GET() {
   try {
+    const now = new Date();
+    const oneHourFromNow = new Date(now.getTime() + (60 * 60 * 1000));
+    
+    // Format current time in HH:mm format
+    const currentTime = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+    const futureTime = oneHourFromNow.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+    
     const upcomingReservations = await prisma.reservation.findMany({
       where: {
-        date: {
-          gt: new Date()
+        date: new Date(now.toISOString().split('T')[0]),
+        time: {
+          gte: currentTime,
+          lte: futureTime
         }
       },
-      orderBy: {
-        date: 'asc'
-      },
+      orderBy: [
+        { date: 'asc' },
+        { time: 'asc' }
+      ],
       include: {
         table: true
-      },
-      take: 5 // Limit to 5 most recent reservations
+      }
     });
 
     const formattedReservations = upcomingReservations.map(res => ({
       id: res.id,
-      customer: res.customerName,
-      date: new Date(res.date).toLocaleDateString(),
-      guests: res.partySize,
+      customerName: res.customerName,
+      date: res.date,
+      time: res.time,
+      partySize: res.partySize,
       status: res.status,
-      phone: res.customerPhone
+      customerPhone: res.customerPhone,
+      customerEmail: res.customerEmail,
+      tableNumber: res.table?.tableNumber,
+      specialRequests: res.specialRequests
     }));
 
     return NextResponse.json(formattedReservations);

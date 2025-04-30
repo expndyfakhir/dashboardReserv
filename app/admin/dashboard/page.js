@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
-import { BellIcon, CogIcon, UserIcon } from '@heroicons/react/24/outline';
+import { BellIcon, CogIcon, UserIcon, TrashIcon } from '@heroicons/react/24/outline';
 import NotificationSound from '../../components/NotificationSound';
 import { motion } from 'framer-motion';
 export default function Dashboard() {
@@ -167,12 +167,18 @@ export default function Dashboard() {
         }
         let upcomingReservations = await reservationsRes.json();
         
-        // Filter reservations for today and within next hour
-        upcomingReservations = upcomingReservations.filter(reservation => {
-          const reservationDateTime = new Date(`${reservation.date}T${reservation.time}`);
-          const isToday = reservationDateTime.toDateString() === now.toDateString();
-          return isToday && reservationDateTime >= now && reservationDateTime <= oneHourFromNow;
-        });
+        // Filter and sort reservations for today and within next hour
+        upcomingReservations = upcomingReservations
+          .filter(reservation => {
+            const reservationDateTime = new Date(`${reservation.date}T${reservation.time}`);
+            const isToday = reservationDateTime.toDateString() === now.toDateString();
+            return isToday && reservationDateTime >= now && reservationDateTime <= oneHourFromNow;
+          })
+          .sort((a, b) => {
+            const timeA = new Date(`${a.date}T${a.time}`);
+            const timeB = new Date(`${b.date}T${b.time}`);
+            return timeA - timeB;
+          });
 
         setStats(statsData);
         setReservations(upcomingReservations);
@@ -316,6 +322,7 @@ export default function Dashboard() {
                   <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Customer</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Date</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200/50">
@@ -344,6 +351,50 @@ export default function Dashboard() {
                           'bg-rose-50 text-rose-700 ring-rose-600/20'}`}>
                         {reservation.status}
                       </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <motion.button
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={async () => {
+                          if (window.confirm('Are you sure you want to delete this reservation?')) {
+                            try {
+                              const response = await fetch(`/api/reservations/${reservation.id}`, {
+                                method: 'DELETE',
+                              });
+                              
+                              if (!response.ok) {
+                                throw new Error('Failed to delete reservation');
+                              }
+                              
+                              // Remove the deleted reservation from the state
+                              setReservations(prevReservations =>
+                                prevReservations.filter(r => r.id !== reservation.id)
+                              );
+                              
+                              // Add a notification
+                              const newNotification = {
+                                id: Date.now(),
+                                message: `Reservation #${reservation.id} has been deleted`,
+                                time: 'Just now',
+                                type: 'success'
+                              };
+                              
+                              setNotifications(prev => {
+                                const updatedNotifications = [newNotification, ...prev].slice(0, 10);
+                                localStorage.setItem('dashboardNotifications', JSON.stringify(updatedNotifications));
+                                return updatedNotifications;
+                              });
+                            } catch (error) {
+                              console.error('Error deleting reservation:', error);
+                              alert('Failed to delete reservation');
+                            }
+                          }
+                        }}
+                        className="p-2 text-rose-600 hover:text-rose-800 transition-colors duration-200 bg-rose-50 rounded-lg hover:bg-rose-100"
+                      >
+                        <TrashIcon className="h-5 w-5" />
+                      </motion.button>
                     </td>
                   </motion.tr>
                 ))}
