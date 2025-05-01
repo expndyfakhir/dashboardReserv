@@ -16,6 +16,13 @@ export default function Dashboard() {
     }
     return [];
   });
+
+  const clearNotifications = () => {
+    setNotifications([]);
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('dashboardNotifications');
+    }
+  };
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastExternalReservationId, setLastExternalReservationId] = useState(null);
@@ -77,14 +84,23 @@ export default function Dashboard() {
               type: latestReservation.status === 'confirmed' ? 'success' : 'warning'
             };
             
-            // Update notifications list with max 10 items
+            // Update notifications list with max 10 items, preventing duplicates
             setNotifications(prev => {
-              const updatedNotifications = [newNotification, ...prev].slice(0, 10);
-              // Save to localStorage
-              if (typeof window !== 'undefined') {
-                localStorage.setItem('dashboardNotifications', JSON.stringify(updatedNotifications));
+              // Check if notification with same message already exists
+              const isDuplicate = prev.some(notification => 
+                notification.message === newNotification.message
+              );
+              
+              // Only add if not a duplicate
+              if (!isDuplicate) {
+                const updatedNotifications = [newNotification, ...prev].slice(0, 10);
+                // Save to localStorage
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('dashboardNotifications', JSON.stringify(updatedNotifications));
+                }
+                return updatedNotifications;
               }
-              return updatedNotifications;
+              return prev;
             });
           }
         }
@@ -167,18 +183,12 @@ export default function Dashboard() {
         }
         let upcomingReservations = await reservationsRes.json();
         
-        // Filter and sort reservations for today and within next hour
-        upcomingReservations = upcomingReservations
-          .filter(reservation => {
-            const reservationDateTime = new Date(`${reservation.date}T${reservation.time}`);
-            const isToday = reservationDateTime.toDateString() === now.toDateString();
-            return isToday && reservationDateTime >= now && reservationDateTime <= oneHourFromNow;
-          })
-          .sort((a, b) => {
-            const timeA = new Date(`${a.date}T${a.time}`);
-            const timeB = new Date(`${b.date}T${b.time}`);
-            return timeA - timeB;
-          });
+        // No need to filter here since the API already returns correctly filtered data
+        upcomingReservations = upcomingReservations.sort((a, b) => {
+          const timeA = new Date(`${a.date}T${a.time}`);
+          const timeB = new Date(`${b.date}T${b.time}`);
+          return timeA - timeB;
+        });
 
         setStats(statsData);
         setReservations(upcomingReservations);
@@ -318,11 +328,10 @@ export default function Dashboard() {
             <table className="w-full border-separate border-spacing-0">
               <thead className="bg-slate-50/50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">ID</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Customer</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Contact Info</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Date</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200/50">
@@ -334,67 +343,27 @@ export default function Dashboard() {
                     key={reservation.id} 
                     className="hover:bg-slate-50/50 transition-all duration-300 ease-in-out transform hover:scale-[1.01]"
                   >
-                    <td className="px-6 py-4 text-sm text-slate-500 font-medium">{reservation.id}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center">
                         <div>
-                          <div className="text-sm font-semibold text-slate-800">{reservation.customer}</div>
-                          <div className="text-sm text-slate-500">{reservation.phone}</div>
+                          <div className="text-sm font-semibold text-slate-800">{reservation.customerName}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{reservation.date}</td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ring-1 ring-inset
-                        ${reservation.status === 'Confirmed' ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' :
-                          reservation.status === 'Pending' ? 'bg-amber-50 text-amber-700 ring-amber-600/20' :
-                          'bg-rose-50 text-rose-700 ring-rose-600/20'}`}>
-                        {reservation.status}
-                      </span>
+                      <div className="text-sm text-slate-500">{reservation.customerPhone}</div>
+                      <div className="text-sm text-slate-500">{reservation.customerEmail}</div>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-slate-600">
+                      {new Date(reservation.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at {reservation.time}
                     </td>
                     <td className="px-6 py-4">
-                      <motion.button
-                        whileHover={{ scale: 1.1 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={async () => {
-                          if (window.confirm('Are you sure you want to delete this reservation?')) {
-                            try {
-                              const response = await fetch(`/api/reservations/${reservation.id}`, {
-                                method: 'DELETE',
-                              });
-                              
-                              if (!response.ok) {
-                                throw new Error('Failed to delete reservation');
-                              }
-                              
-                              // Remove the deleted reservation from the state
-                              setReservations(prevReservations =>
-                                prevReservations.filter(r => r.id !== reservation.id)
-                              );
-                              
-                              // Add a notification
-                              const newNotification = {
-                                id: Date.now(),
-                                message: `Reservation #${reservation.id} has been deleted`,
-                                time: 'Just now',
-                                type: 'success'
-                              };
-                              
-                              setNotifications(prev => {
-                                const updatedNotifications = [newNotification, ...prev].slice(0, 10);
-                                localStorage.setItem('dashboardNotifications', JSON.stringify(updatedNotifications));
-                                return updatedNotifications;
-                              });
-                            } catch (error) {
-                              console.error('Error deleting reservation:', error);
-                              alert('Failed to delete reservation');
-                            }
-                          }
-                        }}
-                        className="p-2 text-rose-600 hover:text-rose-800 transition-colors duration-200 bg-rose-50 rounded-lg hover:bg-rose-100"
-                      >
-                        <TrashIcon className="h-5 w-5" />
-                      </motion.button>
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ring-1 ring-inset
+                        ${reservation.status === 'confirmed' ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20' :
+                          reservation.status === 'pending' ? 'bg-amber-50 text-amber-700 ring-amber-600/20' :
+                          'bg-rose-50 text-rose-700 ring-rose-600/20'}`}>
+                        {reservation.status.charAt(0).toUpperCase() + reservation.status.slice(1)}
+                      </span>
                     </td>
                   </motion.tr>
                 ))}
@@ -412,8 +381,19 @@ export default function Dashboard() {
         >
           {/* Notifications */}
           <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-slate-200/50 overflow-hidden">
-            <div className="p-6 border-b border-slate-200/50">
+            <div className="p-6 border-b border-slate-200/50 flex justify-between items-center">
               <h2 className="text-xl font-semibold text-slate-800">Recent Notifications</h2>
+              {notifications.length > 0 && (
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={clearNotifications}
+                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-rose-600 bg-rose-50 rounded-xl hover:bg-rose-100 transition-colors duration-200"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                  Clear All
+                </motion.button>
+              )}
             </div>
             <div className="p-6">
               <div className="space-y-4">
