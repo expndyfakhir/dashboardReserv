@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { useState } from 'react';
@@ -49,7 +50,16 @@ export default function DashboardLayout({ children }) {
       >
         <div className="h-full flex flex-col overflow-hidden">
           <div className="flex-shrink-0 flex items-center justify-center h-20 bg-gradient-to-r from-[#316160] to-[#316160]/80">
-            <h1 className={`text-xl font-bold text-white transition-opacity duration-200 ${isMenuOpen ? 'opacity-100' : 'opacity-0 md:opacity-0'}`}>El Manzah Admin</h1>
+            <div className={`transition-all duration-200 ${isMenuOpen ? 'w-32' : 'w-10 md:w-10'}`}>
+              <Image 
+                src="/logo.png" 
+                alt="El Manzah Logo" 
+                width={120} 
+                height={45} 
+                className="object-contain" 
+                priority
+              />
+            </div>
           </div>
           <div className="flex-1 flex flex-col overflow-y-auto">
             <div className="flex-1 space-y-1 px-2 py-4">

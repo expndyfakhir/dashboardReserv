@@ -2,13 +2,17 @@
 
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
-import { BellIcon, CogIcon, UserIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { BellIcon, TrashIcon } from '@heroicons/react/24/outline';
 import NotificationSound from '../../components/NotificationSound';
 import { motion } from 'framer-motion';
 export default function Dashboard() {
   const { data: session } = useSession();
   const [stats, setStats] = useState(null);
   const [reservations, setReservations] = useState([]);
+  const [currentDateTime, setCurrentDateTime] = useState({
+    date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+    time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+  });
   const [notifications, setNotifications] = useState(() => {
     if (typeof window !== 'undefined') {
       const savedNotifications = localStorage.getItem('dashboardNotifications');
@@ -26,25 +30,23 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastExternalReservationId, setLastExternalReservationId] = useState(null);
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
 
-  // Format current time and date
-  const formatDateTime = () => {
-    const now = new Date();
-    return {
-      time: now.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      }),
-      date: now.toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric'
-      })
+  // Handle click outside notifications dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      const dropdown = document.getElementById('notifications-dropdown');
+      const button = document.getElementById('notifications-button');
+      if (dropdown && !dropdown.contains(event.target) && !button.contains(event.target)) {
+        setIsNotificationsOpen(false);
+      }
     };
-  };
 
-  const [currentDateTime, setCurrentDateTime] = useState(formatDateTime());
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Removed date/time formatting as it's no longer needed
 
   // Check for new external reservations every 30 seconds
   useEffect(() => {
@@ -65,8 +67,12 @@ export default function Dashboard() {
             setLastExternalReservationId(latestReservation.id);
             
             // Play notification sound
-            if (window.playReservationNotification) {
-              window.playReservationNotification();
+            try {
+              if (typeof window !== 'undefined' && window.playReservationNotification) {
+                window.playReservationNotification();
+              }
+            } catch (error) {
+              console.error('Error playing notification sound:', error);
             }
             
             // Format time
@@ -118,11 +124,14 @@ export default function Dashboard() {
     return () => clearInterval(timer);
   }, [lastExternalReservationId]);
 
+  // Update date and time every minute
   useEffect(() => {
-    // Update time every minute
     const timer = setInterval(() => {
-      setCurrentDateTime(formatDateTime());
-    }, 60000);
+      setCurrentDateTime({
+        date: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
+        time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true })
+      });
+    }, 60000); // Update every minute
 
     return () => clearInterval(timer);
   }, []);
@@ -226,59 +235,62 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
+    <div className="min-h-screen bg-gradient-to-br from-[#316160]/5 to-[#316160]/10 p-8">
+      <div className="flex items-center justify-end mb-8">
+        <div className="relative">
+          <button
+            id="notifications-button"
+            onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+            className="p-2 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white/90 transition-all duration-200 relative group shadow-lg border border-[#316160]/10"
+          >
+            <BellIcon className="h-6 w-6 text-[#316160]" />
+            {notifications.length > 0 && (
+              <span className="absolute -top-1 -right-1 h-4 w-4 bg-rose-500 rounded-full flex items-center justify-center text-[10px] font-bold text-white">
+                {notifications.length}
+              </span>
+            )}
+          </button>
+          
+          {/* Notifications Dropdown */}
+          {isNotificationsOpen && notifications.length > 0 && (
+            <div id="notifications-dropdown" className="absolute right-0 mt-2 w-96 bg-white rounded-2xl shadow-xl border border-[#316160]/10 overflow-hidden z-50">
+              <div className="p-4 border-b border-[#316160]/10 flex justify-between items-center">
+                <h3 className="text-lg font-semibold text-[#316160]">Notifications</h3>
+                <button
+                  onClick={clearNotifications}
+                  className="text-rose-500 hover:text-rose-600 transition-colors duration-200 flex items-center gap-1 text-sm font-medium"
+                >
+                  <TrashIcon className="h-4 w-4" />
+                  Clear All
+                </button>
+              </div>
+              <div className="max-h-96 overflow-y-auto">
+                {notifications.map((notification) => (
+                  <motion.div
+                    key={notification.id}
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="p-4 hover:bg-[#316160]/5 transition-colors duration-200 border-b border-[#316160]/10 last:border-b-0"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`p-2 rounded-xl ${notification.type === 'success' ? 'bg-emerald-50' : 'bg-amber-50'}`}>
+                        <BellIcon className={`h-5 w-5 ${notification.type === 'success' ? 'text-emerald-600' : 'text-amber-600'}`} />
+                      </div>
+                      <div>
+                        <p className="text-sm text-[#316160]">{notification.message}</p>
+                        <p className="text-xs text-[#316160]/60 mt-1">{notification.time}</p>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
       <NotificationSound />
       {/* Header Section */}
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="mb-10 flex items-center justify-between bg-white/80 backdrop-blur-lg rounded-3xl shadow-lg border border-slate-200/50 p-8"
-      >
-        <div>
-          <h1 className="text-4xl font-bold bg-gradient-to-r from-[#316160] to-[#316160]/60 bg-clip-text text-transparent">Dashboard Overview</h1>
-          <p className="mt-3 text-sm text-slate-500 flex items-center gap-3">
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#316160]/10 text-[#316160] ring-1 ring-inset ring-[#316160]/20">
-              {currentDateTime.date}
-            </span>
-            <span>•</span>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-[#316160]/10 text-[#316160] ring-1 ring-inset ring-[#316160]/20">
-              {currentDateTime.time}
-            </span>
-          </p>
-          <p className="mt-3 text-sm font-medium text-slate-700 flex items-center gap-3">
-            Welcome back, <span className="text-indigo-600 font-semibold">{session?.user?.name}</span>
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-50 text-slate-700 ring-1 ring-inset ring-slate-600/20">
-              {session?.user?.role || 'Admin'}
-            </span>
-          </p>
-        </div>
-        <div className="flex items-center gap-6">
-          <motion.button 
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            className="p-3 text-slate-600 hover:text-indigo-600 transition-colors duration-200 bg-slate-50 rounded-xl hover:bg-slate-100"
-          >
-            <BellIcon className="h-6 w-6" />
-          </motion.button>
-          {session?.user?.role === 'SUPER_ADMIN' && (
-            <motion.button 
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.95 }}
-              className="p-3 text-slate-600 hover:text-indigo-600 transition-colors duration-200 bg-slate-50 rounded-xl hover:bg-slate-100"
-            >
-              <UserIcon className="h-6 w-6" />
-            </motion.button>
-          )}
-          <motion.button 
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.95 }}
-            className="p-3 text-slate-600 hover:text-indigo-600 transition-colors duration-200 bg-slate-50 rounded-xl hover:bg-slate-100"
-          >
-            <CogIcon className="h-6 w-6" />
-          </motion.button>
-        </div>
-      </motion.div>
+    
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8 mb-10">
@@ -314,6 +326,37 @@ export default function Dashboard() {
 
       {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Tables Status Section */}
+        <motion.div
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-slate-200/50 overflow-hidden transform transition-all duration-300 hover:shadow-xl"
+        >
+          <div className="p-6 border-b border-slate-200/50">
+            <h2 className="text-xl font-semibold text-slate-800">Tables Status</h2>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-2 gap-4">
+              {Array.from({ length: parseInt(stats?.totalTables?.value || 0) }).map((_, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.3, delay: index * 0.1 }}
+                  className="bg-[#316160]/5 rounded-2xl p-4 flex flex-col items-center justify-center gap-2"
+                >
+                  <div className="text-2xl">🪑</div>
+                  <div className="text-lg font-semibold text-[#316160]">Table {index + 1}</div>
+                  <div className="text-sm text-[#316160]/70">Capacity: 4-6</div>
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                    Available
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </motion.div>
         {/* Recent Reservations */}
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
@@ -322,7 +365,7 @@ export default function Dashboard() {
           className="lg:col-span-2 bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-slate-200/50 overflow-hidden transform transition-all duration-300 hover:shadow-xl"
         >
           <div className="p-6 border-b border-slate-200/50">
-            <h2 className="text-xl font-semibold text-slate-800">Today's Upcoming Reservations (Next Hour)</h2>
+            <h2 className="text-xl font-semibold text-slate-800">Today's Upcoming Reservations</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full border-separate border-spacing-0">
@@ -372,58 +415,7 @@ export default function Dashboard() {
           </div>
         </motion.div>
 
-        {/* Side Panel */}
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5 }}
-          className="space-y-8"
-        >
-          {/* Notifications */}
-          <div className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg border border-slate-200/50 overflow-hidden">
-            <div className="p-6 border-b border-slate-200/50 flex justify-between items-center">
-              <h2 className="text-xl font-semibold text-slate-800">Recent Notifications</h2>
-              {notifications.length > 0 && (
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={clearNotifications}
-                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-rose-600 bg-rose-50 rounded-xl hover:bg-rose-100 transition-colors duration-200"
-                >
-                  <TrashIcon className="h-4 w-4" />
-                  Clear All
-                </motion.button>
-              )}
-            </div>
-            <div className="p-6">
-              <div className="space-y-4">
-                {notifications.map((notification, index) => (
-                  <motion.div 
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.3, delay: index * 0.1 }}
-                    key={notification.id} 
-                    className="flex items-start gap-4 p-4 rounded-2xl hover:bg-slate-50/50 transition-colors duration-200"
-                  >
-                    <div className={`p-2 rounded-xl
-                      ${notification.type === 'success' ? 'bg-emerald-50' :
-                        notification.type === 'warning' ? 'bg-amber-50' :
-                        'bg-rose-50'}`}>
-                      <BellIcon className={`h-5 w-5
-                        ${notification.type === 'success' ? 'text-emerald-600' :
-                          notification.type === 'warning' ? 'text-amber-600' :
-                          'text-rose-600'}`} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-slate-800">{notification.message}</p>
-                      <p className="text-xs text-slate-500 mt-1">{notification.time}</p>
-                    </div>
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </motion.div>
+
       </div>
     </div>
   );

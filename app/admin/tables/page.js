@@ -47,7 +47,7 @@ export default function TablesManagement() {
         table.id === updatedTable.id ? updatedTable : table
       )
     );
-    fetchTables();
+    fetchTables(); // Refresh table list
   };
 
   const handleSubmit = async (e) => {

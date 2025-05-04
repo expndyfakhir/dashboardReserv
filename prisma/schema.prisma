@@ -20,6 +20,8 @@ model Table {
   isDivisible  Boolean       @default(false)
   splitStatus  String? // null: not split, "left": left half booked, "right": right half booked, "both": fully booked when split
   tableType    String        @default("normal") // normal, business, dinner
+  x            Int           @default(0) // Table x-coordinate position
+  y            Int           @default(0) // Table y-coordinate position
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
   reservations Reservation[] // Add relation to Reservation model
