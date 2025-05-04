@@ -276,32 +276,55 @@ export default function TablesManagement() {
                     const isRound = table.tableType === 'dinner';
                     const isRectangle = table.tableType === 'business';
                     const tableSize = table.capacity > 6 ? 'w-48 h-32' : 'w-40 h-28';
+                    const isAvailable = table.isAvailable;
                     
                     return (
                       <motion.div 
                         key={table.id}
-                        whileHover={{ scale: 1.02 }}
-                        className="relative"
+                        whileHover={{ scale: 1.02, y: -5 }}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.3 }}
+                        className="relative group"
                       >
-                        <div 
+                        <motion.div 
                           className={`
                             ${tableSize}
                             ${isRound ? 'rounded-full' : isRectangle ? 'rounded-[2rem]' : 'rounded-xl'}
-                            bg-[#e8d5b7] border-2 border-[#8b7355]
+                            bg-gradient-to-br from-[#e8d5b7] to-[#d4c4a8]
+                            border-2 ${isAvailable ? 'border-[#8b7355]' : 'border-rose-400'}
                             shadow-lg cursor-pointer
                             flex items-center justify-center
                             transform transition-all duration-300
-                            relative
+                            relative overflow-hidden
+                            group-hover:shadow-xl
                           `}
                           onClick={() => handleEditClick(table)}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                         >
                           {/* Table surface pattern */}
                           <div className="absolute inset-0 bg-[url('/wood-pattern.png')] opacity-30 rounded-inherit" />
                           
-                          {/* Status indicator */}
-                          <div className={`absolute top-0 left-0 right-0 h-1.5 ${table.isAvailable ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                          {/* Status indicator - Glowing effect */}
+                          <div 
+                            className={`
+                              absolute -inset-1 opacity-50 blur-lg transition-all duration-300
+                              ${isAvailable ? 'bg-emerald-400/30' : 'bg-rose-400/30'}
+                              group-hover:opacity-70
+                            `} 
+                          />
                           
-                          {/* Chairs */}
+                          {/* Status ring */}
+                          <div 
+                            className={`
+                              absolute inset-0 border-4 rounded-inherit transition-colors duration-300
+                              ${isAvailable ? 'border-emerald-400/20' : 'border-rose-400/20'}
+                              group-hover:border-opacity-50
+                            `}
+                          />
+                          
+                          {/* Chairs with hover animation */}
                           {[...Array(Math.min(table.capacity, 8))].map((_, index) => {
                             const angle = (index * (360 / Math.min(table.capacity, 8))) * (Math.PI / 180);
                             const radius = isRound ? 32 : 28;
@@ -309,9 +332,16 @@ export default function TablesManagement() {
                             const top = 50 + Math.sin(angle) * radius;
                             
                             return (
-                              <div
+                              <motion.div
                                 key={index}
-                                className="absolute w-4 h-4 bg-[#6b5b45] rounded-full transform -translate-x-1/2 -translate-y-1/2"
+                                initial={{ scale: 1 }}
+                                whileHover={{ scale: 1.2 }}
+                                className={`
+                                  absolute w-4 h-4 rounded-full transform -translate-x-1/2 -translate-y-1/2
+                                  ${isAvailable ? 'bg-[#6b5b45]' : 'bg-[#8b7355]/50'}
+                                  transition-colors duration-300
+                                  shadow-inner
+                                `}
                                 style={{
                                   left: `${left}%`,
                                   top: `${top}%`,
@@ -320,36 +350,66 @@ export default function TablesManagement() {
                             );
                           })}
                           
-                          {/* Table information */}
-                          <div className="z-10 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-xl shadow-sm text-center">
+                          {/* Table information with glass effect */}
+                          <div className="
+                            z-10 bg-white/90 backdrop-blur-sm px-4 py-2 
+                            rounded-xl shadow-lg text-center
+                            border border-white/20
+                            transform transition-all duration-300
+                            group-hover:bg-white/95 group-hover:scale-105
+                          ">
                             <p className="font-semibold text-slate-800">Table {table.tableNumber}</p>
                             <p className="text-xs text-slate-600">{table.capacity} Seats</p>
                           </div>
-                        </div>
+                        </motion.div>
                         
-                        {/* Table status badge */}
-                        <div className="absolute -top-2 -right-2">
+                        {/* Animated status badge */}
+                        <motion.div 
+                          className="absolute -top-2 -right-2"
+                          initial={{ scale: 0.8, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ delay: 0.1 }}
+                        >
                           <span className={`
-                            px-2 py-1 rounded-full text-xs font-medium shadow-sm
-                            ${table.isAvailable ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/20' : 'bg-rose-50 text-rose-700 ring-1 ring-rose-500/20'}
+                            px-3 py-1.5 rounded-full text-xs font-medium
+                            shadow-lg flex items-center gap-1.5
+                            border backdrop-blur-sm
+                            transition-all duration-300
+                            ${isAvailable 
+                              ? 'bg-emerald-50/90 text-emerald-700 border-emerald-200/50 group-hover:bg-emerald-100/90' 
+                              : 'bg-rose-50/90 text-rose-700 border-rose-200/50 group-hover:bg-rose-100/90'}
                           `}>
-                            {table.isAvailable ? 'Available' : 'Occupied'}
+                            <span className={`
+                              w-2 h-2 rounded-full shadow-inner
+                              ${isAvailable ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}
+                            `} />
+                            {isAvailable ? 'Available' : 'Occupied'}
                           </span>
-                        </div>
+                        </motion.div>
                         
-                        {/* Delete Button */}
-                        <div className="absolute -bottom-2 -right-2 z-10">
+                        {/* Animated delete button */}
+                        <motion.div 
+                          className="absolute -bottom-2 -right-2 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                          initial={{ scale: 0.8 }}
+                          whileHover={{ scale: 1.1 }}
+                        >
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
                               handleDeleteTable(table.id);
                             }}
-                            className="p-2 bg-white rounded-full shadow-md hover:bg-rose-50 text-rose-600 hover:text-rose-700 transition-colors duration-200 border border-slate-200 hover:border-rose-200 focus:outline-none focus:ring-2 focus:ring-rose-500/20"
+                            className="
+                              p-2 bg-white/90 backdrop-blur-sm rounded-full
+                              shadow-lg hover:bg-rose-50 text-rose-600
+                              hover:text-rose-700 transition-all duration-200
+                              border border-rose-100 hover:border-rose-300
+                              focus:outline-none focus:ring-2 focus:ring-rose-500/20
+                            "
                             title="Delete table"
                           >
                             <TrashIcon className="h-4 w-4" />
                           </button>
-                        </div>
+                        </motion.div>
                       </motion.div>
                     );
                   })}
