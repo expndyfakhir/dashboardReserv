@@ -1,11 +1,12 @@
-import { Inter } from "next/font/google";
-import { GeistSans } from "geist/font";
-import { GeistMono } from "geist/font/mono";
+import { Inter, Roboto_Mono } from "next/font/google";
 import ClientProvider from "./components/ClientProvider";
 import "./globals.css";
 
-const geistSans = GeistSans();
-const geistMono = GeistMono();
+const robotoMono = Roboto_Mono({
+  subsets: ['latin'],
+  display: 'swap',
+});
+
 const inter = Inter({
   subsets: ["latin"],
   display: "swap",
@@ -20,7 +21,7 @@ export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <body
-        className={`${geistSans.className} ${geistMono.className} ${inter.className} antialiased`}
+        className={`${inter.className} ${robotoMono.className} antialiased`}
       >
         <ClientProvider>{children}</ClientProvider>
       </body>
