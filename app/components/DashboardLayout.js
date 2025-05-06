@@ -5,7 +5,7 @@ import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useSession, signOut } from 'next-auth/react';
 import { useState } from 'react';
-import { HomeIcon, TableCellsIcon, CalendarIcon, UsersIcon, ArrowRightOnRectangleIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { HomeIcon, TableCellsIcon, CalendarIcon, UsersIcon, ArrowRightOnRectangleIcon, Bars3Icon, XMarkIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
 
 export default function DashboardLayout({ children }) {
   const pathname = usePathname();
@@ -17,6 +17,7 @@ export default function DashboardLayout({ children }) {
     { name: 'Tables', href: '/admin/tables', icon: TableCellsIcon },
     { name: 'Reservations', href: '/admin/reservations', icon: CalendarIcon },
     { name: 'Calendar', href: '/admin/calendar', icon: CalendarIcon },
+    { name: 'Settings', href: '/admin/settings', icon: Cog6ToothIcon },
   ];
 
   const adminNavigation = [
